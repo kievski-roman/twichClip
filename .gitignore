@@ -1,0 +1,33 @@
+# Laravel основне
+/vendor
+/node_modules
+.env
+.env.*
+.env.backup
+
+# Кеші Laravel
+/storage/*.key
+/storage/framework/*
+/storage/logs/*
+/bootstrap/cache/*
+
+# Laravel Mix / Vite
+/public/hot
+/public/build
+/public/storage
+
+# IDE/Editor файли
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+.phpactor.json
+.phpunit.result.cache
+.phpunit.cache
+/fleet/
+.zed/
+
+# Інші можливі файли
+Homestead.yaml
+Homestead.json
+auth.json
