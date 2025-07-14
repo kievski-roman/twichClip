@@ -31,3 +31,10 @@ Thumbs.db
 Homestead.yaml
 Homestead.json
 auth.json
+
+# Whisper binary
+/bin/whisper
+
+# Whisper models
+/storage/whisper-models/*
+!/storage/whisper-models/.gitkeep
