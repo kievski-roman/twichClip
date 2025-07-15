@@ -8,24 +8,27 @@ use Symfony\Component\Process\Process;
 
 class VideoDownloaderService
 {
-    public function downloadClip(string $clipUrl, string $filename): bool
+    /**
+     * Завантажує кліп і повертає фактичний шлях до MP4.
+     *
+     * @throws \RuntimeException коли yt-dlp падає
+     */
+    public function download(string $url, string $outputPath): string
     {
-        $outputPath = storage_path('app/public/videos/' . $filename);
-
         $process = new Process([
             'yt-dlp',
+            '--no-part',
             '-o', $outputPath,
-            $clipUrl,
+            $url,
         ]);
 
-        $process->setTimeout(70); // 3 хв максимум
-
+        $process->setTimeout(180);          // 3 хв
         try {
             $process->mustRun();
-            return true;
+            return $outputPath;
         } catch (ProcessFailedException $e) {
-            logger()->error('yt-dlp failed', ['error' => $e->getMessage()]);
-            return false;
+            logger()->error('yt-dlp failed', ['stderr' => $e->getProcess()->getErrorOutput()]);
+            throw new \RuntimeException('Download failed: '.$e->getMessage(), 0, $e);
         }
     }
 }

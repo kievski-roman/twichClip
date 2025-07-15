@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\DownloadClipJob;
+use App\Models\Clip;
 use App\Services\TwitchApiService;
 use Illuminate\Http\Request;
 use App\Services\VideoDownloaderService;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ClipController extends Controller
 {
@@ -45,28 +49,47 @@ class ClipController extends Controller
         return redirect()->route('clip.result', ['username' => $request->input('username')]);
     }
 
-
-
-    // Метод для GET (через /clips/result/{username})
-
     // Метод POST /clip/download
     public function download(Request $request)
     {
-        $clipUrl = $request->input('url');
-        $username = $request->input('username'); // передається у формі
+        $clip = Clip::firstOrCreate(
+            ['slug' => basename($request->url)],
+            [
+                'uuid'   => (string) Str::uuid(),
+                'url'    => $request->url,
+                'status' => 'queued',
+            ]
+        );
 
-        $slug = basename($clipUrl);
-        $filename = $slug . '.mp4';
-        $path = storage_path('app/public/videos/' . $filename);
+        DownloadClipJob::dispatch($clip)->onQueue('video');
 
-        if (!file_exists($path)) {
-            $downloader = new VideoDownloaderService();
-            $downloader->downloadClip($clipUrl, $filename);
-        }
-
-        return redirect()->route('clip.result', ['username' => $username]);
+        return back()->with('flash', 'Кліп додано у чергу! Перевірте через хвилину.');
     }
+    public function index(){
+        $clips = Clip::where('status', 'ready')
+            ->latest()
+            ->get();
+        return view('clip-index', compact('clips'));
+    }
+
+    public function updateSrt(Request $request, Clip $clip)
+    {
+        $request->validate(['srt' => 'required|string']);
+        file_put_contents($clip->srt_path, $request->input('srt'));
+        $clip->touch();
+        return response()->noContent();
+    }
+    public function show(Clip $clip)
+    {
+        $videoUrl = Storage::url(Str::after($clip->video_path, 'app/public/'));
+        $srtPath  = $clip->srt_path;
+        $subs     = is_file($srtPath)
+            ? file_get_contents($srtPath)
+            : '-- пусто --';
+
+        return view('clip-show', compact('clip', 'videoUrl', 'subs'));
+    }
+
+
 }
-
-
 

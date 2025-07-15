@@ -40,10 +40,17 @@ return [
         'secret' => env('TWITCH_SECRET'),
         'access_token' => env('TWITCH_ACCESS_TOKEN'),
     ],
+    // config/services.php
     'whisper' => [
-        'model_path' => base_path('bin/whisper/whisper-cli.exe'),
-        'model' => env('WHISPER_MODEL_PATH', storage_path('whisper-models/small.bin')),
-        'default_lang' => env('WHISPER_DEFAULT_LANG', 'en'),
+        // ❶  exe-файл
+        'bin_path'    => base_path('bin/whisper/whisper-cli.exe'),
+
+        // ❷  модель .bin
+        'model_path'  => env('WHISPER_MODEL_PATH',
+            storage_path('whisper-models/small.bin')),
+
+        'default_lang'=> env('WHISPER_DEFAULT_LANG', 'en'),
     ],
+
 
 ];
