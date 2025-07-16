@@ -74,18 +74,37 @@ class ClipController extends Controller
 
     public function updateSrt(Request $request, Clip $clip)
     {
-        $request->validate(['srt' => 'required|string']);
-        file_put_contents($clip->srt_path, $request->input('srt'));
-        $clip->touch();
-        return response()->noContent();
+        $data = $request->validate([
+            'srt' => 'required|string',
+        ]);
+
+        // 1. Тільки ВІДНОСНИЙ шлях усередині диска 'public'
+        $relative = "str/{$clip->uuid}.srt";
+
+        // 2. Пишемо файл у storage/app/public/str/...
+        Storage::disk('public')->put($relative, $data['srt']);
+
+        // 3. Запам’ятовуємо без "D:\..." – лиш «public/...»
+        $clip->update(['srt_path' => $relative]);
+
+        return response()->noContent();      // 204
     }
     public function show(Clip $clip)
     {
         $videoUrl = Storage::url(Str::after($clip->video_path, 'app/public/'));
-        $srtPath  = $clip->srt_path;
-        $subs     = is_file($srtPath)
-            ? file_get_contents($srtPath)
-            : '-- пусто --';
+        //
+        if (! Str::startsWith($clip->srt_path, ['/', 'C:', 'D:'])) {
+            $subs = Storage::disk('public')->exists($clip->srt_path)
+                ? Storage::disk('public')->get($clip->srt_path)
+                : '';
+        }
+        // 2. Якщо старий запис – абсолютний → читаємо напряму
+        else {
+            $subs = is_file($clip->srt_path)
+                ? file_get_contents($clip->srt_path)
+                : '';
+        }
+
 
         return view('clip-show', compact('clip', 'videoUrl', 'subs'));
     }

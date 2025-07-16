@@ -17,11 +17,17 @@
         <div class="col-12 col-md-5 d-flex flex-column">
 
             <h3 class="h5 mb-2">Субтитри (SRT)</h3>
+            <div x-data="editor('{{ route('clips.srt', $clip) }}', @js($subs))" class="d-flex flex-column">
+    <textarea x-model="text"
+              @input="scheduleSave"
+              class="form-control flex-grow-1 mb-2"
+              style="min-height: 300px">{{$subs}}</textarea>
 
-            <textarea id="srtEditor"
-                      class="form-control flex-grow-1 mb-2"
-                      style="min-height: 300px"
-                      placeholder="Редагуй тут…">{{ $subs }}</textarea>
+                <small x-show="saving" class="text-muted">Зберігаю…</small>
+                <small x-show="saved"  class="text-success">✓ збережено</small>
+            </div>
+
+
 
             <button id="saveBtn" class="btn btn-primary align-self-start">
                 💾 Зберегти
@@ -31,23 +37,38 @@
         </div>
     </div>
 
-    {{-- ⚡ короткий AJAX на чистому JS --}}
     <script>
-        document.getElementById('saveBtn').addEventListener('click', () => {
-            fetch('{{ route('clips.srt', $clip) }}', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        function editor(url, initialText) {
+            return {
+                text: initialText,
+                saving: false,
+                saved:  false,
+                timer:  null,
+
+                scheduleSave() {
+                    clearTimeout(this.timer)
+                    this.timer = setTimeout(() => this.save(), 1000)   // 1 с debounce
                 },
-                body: JSON.stringify({ srt: document.getElementById('srtEditor').value })
-            }).then(() => {
-                // показуємо «✓ збережено» на 1,5 с
-                const msg = document.getElementById('savedMsg');
-                msg.classList.remove('d-none');
-                setTimeout(() => msg.classList.add('d-none'), 1500);
-            });
-        });
+
+                async save() {
+                    this.saving = true
+                    this.saved  = false
+
+                    await fetch(url, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ srt: this.text })
+                    })
+
+                    this.saving = false
+                    this.saved  = true
+                    setTimeout(() => this.saved = false, 1500)         // згасає через 1½ с
+                }
+            }
+        }
     </script>
 @endsection
 
