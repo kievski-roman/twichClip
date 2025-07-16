@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\BurnSubsJob;
 use App\Jobs\DownloadClipJob;
 use App\Models\Clip;
 use App\Services\TwitchApiService;
@@ -91,23 +92,40 @@ class ClipController extends Controller
     }
     public function show(Clip $clip)
     {
-        $videoUrl = Storage::url(Str::after($clip->video_path, 'app/public/'));
-        //
+        // ✅ Ось це правильна версія, яка підтримує і абсолютні, і відносні шляхи
+        if (! Str::startsWith($clip->video_path, ['/', 'C:', 'D:'])) {
+            $videoUrl = Storage::disk('public')->exists($clip->video_path)
+                ? Storage::disk('public')->url($clip->video_path)
+                : '';
+        } else {
+            // якщо шлях абсолютний
+            $videoUrl = is_file($clip->video_path)
+                ? asset(Str::after($clip->video_path, public_path('\\')))
+                : '';
+        }
+
+        // ✅ так само роби для сабів (ти вже зробив):
         if (! Str::startsWith($clip->srt_path, ['/', 'C:', 'D:'])) {
             $subs = Storage::disk('public')->exists($clip->srt_path)
                 ? Storage::disk('public')->get($clip->srt_path)
                 : '';
-        }
-        // 2. Якщо старий запис – абсолютний → читаємо напряму
-        else {
+        } else {
             $subs = is_file($clip->srt_path)
                 ? file_get_contents($clip->srt_path)
                 : '';
         }
 
-
         return view('clip-show', compact('clip', 'videoUrl', 'subs'));
     }
+    public function generateHardSubs(Clip $clip)
+    {
+        $clip->update(['status' => Clip::STATUS_HARD_PROCESSING]);
+
+        BurnSubsJob::dispatch($clip)->onQueue('hardsubs');
+
+        return back()->with('flash', 'Почали генерацію відео з hard-сабами!');
+    }
+
 
 
 }

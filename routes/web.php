@@ -20,3 +20,10 @@ Route::get ('/clips/{clip}',   [ClipController::class, 'show'])->name('clips.sho
 Route::put ('/clips/{clip}/srt',[ClipController::class, 'updateSrt'])->name('clips.srt');
 
 
+Route::post('/clips/{clip}/hardsubs', [ClipController::class, 'generateHardSubs'])
+    ->name('clips.hardsubs');
+
+
+//Route::put('/clips/{clip}/srt', [ClipController::class, 'updateSrt'])->name('clips.srt');
+//Route::post('/clips/{clip}/burn', [ClipController::class, 'burnSubs'])->name('clips.burn');
+

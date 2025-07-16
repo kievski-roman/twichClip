@@ -17,16 +17,26 @@ class ConvertAudioJob implements ShouldQueue
 
     public function handle(): void
     {
-        $wav = storage_path('tmp/'.$this->clip->uuid.'.wav');
-        File::ensureDirectoryExists(dirname($wav));
+        $relativeWav = "audio/{$this->clip->uuid}.wav";
+        $absoluteWav = storage_path('app/public/' . $relativeWav);
 
-        $cmd = ['ffmpeg', '-y', '-i', $this->clip->video_path,
-            '-ar', '16000', '-ac', '1', '-c:a', 'pcm_s16le', $wav];
+        File::ensureDirectoryExists(dirname($absoluteWav));
+
+        $videoPath = storage_path('app/public/' . $this->clip->video_path);
+
+        $cmd = [
+            'ffmpeg', '-y',
+            '-i', $videoPath,
+            '-ar', '16000',
+            '-ac', '1',
+            '-c:a', 'pcm_s16le',
+            $absoluteWav,
+        ];
 
         (new Process($cmd))->setTimeout(300)->mustRun();
 
         $this->clip->update([
-            'wav_path' => $wav,
+            'wav_path' => $relativeWav,
             'status'   => 'audio_done',
         ]);
 
