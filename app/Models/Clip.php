@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 class Clip extends Model
 {
     //
-    // Clip.php або просто в коментарі для себе:
     const STATUS_HARD_PROCESSING = 'hard_processing';
     const STATUS_HARD_DONE       = 'hard_done';
 
