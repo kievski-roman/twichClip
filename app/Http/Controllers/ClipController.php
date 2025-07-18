@@ -58,6 +58,7 @@ class ClipController extends Controller
             [
                 'uuid'   => (string) Str::uuid(),
                 'url'    => $request->url,
+                'name_video' => basename($request->url),
                 'status' => 'queued',
             ]
         );
@@ -121,9 +122,23 @@ class ClipController extends Controller
     {
         $clip->update(['status' => Clip::STATUS_HARD_PROCESSING]);
 
-        BurnSubsJob::dispatch($clip)->onQueue('hardsubs');
+        BurnSubsJob::dispatch($clip)
+            ->onQueue('hardsubs');
 
         return back()->with('flash', 'Почали генерацію відео з hard-сабами!');
+    }
+
+    public function downloadHardSub(Clip $clip){
+
+
+        abort_unless($clip->status === Clip::STATUS_HARD_DONE, 404);
+
+        $abs = Storage::disk('public')->path($clip->hard_path);
+
+        // Якщо файл випадково зник — 404
+        abort_unless(is_file($abs), 404);
+
+        return response()->download($abs);
     }
 
 

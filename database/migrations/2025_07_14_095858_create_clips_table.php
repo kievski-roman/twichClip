@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('slug', 255);
             $table->text('url');
             $table->string('name_video', 255);
-
+            $table->string('hard_path')->nullable();
             $table->text('video_path')->nullable();
             $table->text('wav_path')->nullable();
             $table->text('srt_path')->nullable();

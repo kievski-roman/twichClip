@@ -24,6 +24,6 @@ Route::post('/clips/{clip}/hardsubs', [ClipController::class, 'generateHardSubs'
     ->name('clips.hardsubs');
 
 
-//Route::put('/clips/{clip}/srt', [ClipController::class, 'updateSrt'])->name('clips.srt');
-//Route::post('/clips/{clip}/burn', [ClipController::class, 'burnSubs'])->name('clips.burn');
+Route::get('/clips/{clip}/download', [ClipController::class, 'downloadHardSub'])
+    ->name('clips.download');
 
