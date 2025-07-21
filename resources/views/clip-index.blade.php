@@ -1,6 +1,4 @@
-@extends('layouts.app')
-
-@section('content')
+<x-app-layout>
     <h1 class="text-2xl mb-4">Готові кліпи</h1>
 
     @if($clips->isEmpty())
@@ -18,4 +16,4 @@
             @endforeach
         </ul>
     @endif
-@endsection
+</x-app-layout>

@@ -1,6 +1,4 @@
-@extends('layouts.app')
-
-@section('content')
+<x-app-layout>
     <h2 class="text-xl mb-4">{{ $clip->slug }}</h2>
 
     {{-- ===== відео + редактор SRT ================================================= --}}
@@ -29,35 +27,49 @@
         $statusUrl   = route('api.clips.status', $clip);
     @endphp
 
-    <div x-data="hardSub({{ $clip->id }}, '{{ $generateUrl }}', '{{ $downloadUrl }}',
-                     '{{ $statusUrl }}', '{{ $clip->status }}', '{{ csrf_token() }}')"
-         x-init="init()"
-         class="mt-4">
+        <div x-data="hardSub({{ $clip->id }},
+                     '{{ $generateUrl }}',
+                     '{{ $downloadUrl }}',
+                     '{{ $statusUrl }}',
+                     '{{ $clip->status->value }}',   {{-- ← .value --}}
+                     '{{ csrf_token() }}')"
+             x-init="init()"
+             class="mt-4">
+
 
         {{-- queued  --}}
-        <template x-if="status==='ready'">
-            <button @click="generate" class="btn btn-primary">
-                🎞️ Generate video Hard‑sub
-            </button>
-        </template>
+            {{-- queued або ready --}}
+            <template x-if="status==='{{ \App\Enums\ClipStatus::QUEUED->value }}'
+             || status==='{{ \App\Enums\ClipStatus::READY->value }}'">
+                <button @click="generate" class="btn btn-primary">
+                    🎞️ Generate video Hard‑sub
+                </button>
+            </template>
 
-        {{-- processing --}}
-        <template x-if="status==='hard_processing'">
-            <button class="btn btn-secondary" disabled>
-                ⏳ Generating…
-            </button>
-        </template>
+            {{-- processing --}}
+            <template x-if="status==='{{ \App\Enums\ClipStatus::HARD_PROCESSING->value }}'">
+                <button class="btn btn-secondary" disabled>⏳ Generating…</button>
+            </template>
 
-        {{-- hard_done --}}
-        <template x-if="status==='hard_done'">
-            <a :href="downloadUrl" class="btn btn-success" download>
-                📥 Download MP4 with Hard‑sub
-            </a>
-        </template>
-    </div>
+            {{-- done --}}
+            <template x-if="status==='{{ \App\Enums\ClipStatus::HARD_DONE->value }}'">
+                <a :href="downloadUrl" class="btn btn-success" download>
+                    📥 Download MP4 with Hard‑sub
+                </a>
+            </template>
+
+        </div>
 
     {{-- ======================= JS =================================================== --}}
     <script>
+
+        const STATUS = {
+            QUEUED: '{{ App\Enums\ClipStatus::QUEUED->value }}',
+            READY:  '{{ App\Enums\ClipStatus::READY->value }}',
+            PROC:   '{{ App\Enums\ClipStatus::HARD_PROCESSING->value }}',
+            DONE:   '{{ App\Enums\ClipStatus::HARD_DONE->value }}',
+        };
+
         /* редактор SRT (ваш код) */
         /* ===== редактор SRT ===== */
         function editor(url, initialText) {
@@ -90,6 +102,9 @@
 
                     this.saving = false;
                     this.saved  = true;   // показує «✓ збережено»
+
+                    window.dispatchEvent(new CustomEvent('srt-updated'));
+
                     setTimeout(() => this.saved = false, 1500); // через 1.5с ховає
                 }
             }
@@ -106,14 +121,20 @@
 
                 /* запускається відразу, коли Alpine ініціалізує компонент */
                 init() {
-                    // якщо сторінку відкрили, коли кліп уже генерується
-                    if (this.status === 'hard_processing') this.startPolling();
+                    /* реагуємо на зміну SRT */
+                    window.addEventListener('srt-updated', () => {
+                        this.status      = STATUS.READY;
+                        this.downloadUrl = null;      // ховаємо старий лінк
+                    });
+
+                    if (this.status === STATUS.PROC)
+                        this.startPolling();
                 },
 
                 /* кнопка "Generate" викликає цей метод */
                 async generate() {
                     // 1. одразу перемикнемо UI на «Generating…»
-                    this.status = 'hard_processing';
+                    this.status = STATUS.PROC;
                     this.startPolling();
 
                     // 2. відправимо POST/clips/{id}/hardsubs (CSRF в headers)
@@ -126,19 +147,17 @@
 
                 /* опитування /api/clips/{id}/status кожні 5с */
                 startPolling() {
-                    if (this.poller) return;          // щоб не запустити двічі
+                    if (this.poller) return;
                     this.poller = setInterval(async () => {
-                        // GET→ { status: 'hard_done', url: '/clips/28/download' }
                         const res = await fetch(statusUrl).then(r => r.json());
-                        this.status      = res.status; // оновлюємо статус
-                        this.downloadUrl = res.url;    // і лінк, коли буде
+                        this.status      = res.status;
+                        this.downloadUrl = res.url;
 
-                        // як тільки hard_done —зупиняємо інтервал
-                        if (this.status === 'hard_done') clearInterval(this.poller);
+                        if (this.status === STATUS.DONE) clearInterval(this.poller);
                     }, 5000);
                 }
             }
         }
 
     </script>
-@endsection
+</x-app-layout>

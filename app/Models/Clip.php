@@ -2,24 +2,24 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Enums\ClipStatus;
+use Illuminate\Notifications\Notifiable;
 
 class Clip extends Model
 {
+    use HasFactory, Notifiable;
     //
-    // Clip.php або просто в коментарі для себе:
-    const STATUS_HARD_PROCESSING = 'hard_processing';
-    const STATUS_HARD_DONE       = 'hard_done';
-
     protected $fillable = [
-        'uuid', 'slug', 'url',
-        'video_path', 'wav_path', 'srt_path', 'hard_path','name_video',
-        'lang', 'status', 'user_id',self::STATUS_HARD_DONE,self::STATUS_HARD_PROCESSING
+        'uuid', 'slug', 'url', 'name_video',
+        'video_path', 'wav_path', 'srt_path', 'hard_path',
+        'status', 'user_id',
+    ];
+    protected $casts = [
+        'status' => ClipStatus::class,
     ];
     public function user(){
         return $this->belongsTo(User::class);
-    }
-    public function scopeFinished($query){
-        return $query->whereIn('status', ['ready',self::STATUS_HARD_PROCESSING, self::STATUS_HARD_DONE]);
     }
 }

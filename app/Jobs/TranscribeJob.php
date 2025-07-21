@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Enums\ClipStatus;
 use App\Models\Clip;
 use App\Services\WhisperService;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -29,7 +30,7 @@ class TranscribeJob implements ShouldQueue
         $srt = $whisper->transcribe($wav, $this->clip->lang);
 
         if (!$srt || !is_file($srt)) {
-            $this->clip->update(['status' => 'failed']);
+            $this->clip->update(['status' => ClipStatus::FAILED]);
             return;
         }
 
@@ -41,7 +42,7 @@ class TranscribeJob implements ShouldQueue
         $this->clip->update([
             'srt_path'         => $relativeSrt,
             'transcript_plain' => strip_tags(file_get_contents($srt)),
-            'status'           => 'ready',
+            'status'           => ClipStatus::READY,
         ]);
 
         // Видаляємо тимчасові файли

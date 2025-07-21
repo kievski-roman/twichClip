@@ -1,4 +1,4 @@
-@extends('layouts.app')
+<x-guest-layout>
 
-@section('content')
-@endsection
+
+    </x-guest-layout>

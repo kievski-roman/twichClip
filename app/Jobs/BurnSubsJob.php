@@ -9,6 +9,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\File;
 use Symfony\Component\Process\Process;
+use App\Enums\ClipStatus;
 
 class BurnSubsJob implements ShouldQueue
 {
@@ -35,17 +36,18 @@ class BurnSubsJob implements ShouldQueue
         $process = new Process([
             'ffmpeg', '-y',
             '-i', $videoPath,
-            '-vf', "subtitles={$subsPath}",
+            '-vf', "subtitles='{$subsPath}'",
             '-c:v', 'libx264',
             $outputAbs,
         ], $basePath);  // ← тут вказано базову папку!
+
 
         $process->setTimeout(600)->mustRun();
 
         // оновлюємо Clip після створення хард-сабів
         $this->clip->update([
             'hard_path' => $outputRel,
-            'status'    => Clip::STATUS_HARD_DONE,
+            'status'    => ClipStatus::HARD_DONE,
         ]);
     }
 }

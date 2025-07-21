@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Enums\ClipStatus;
 use App\Models\Clip;
 use App\Services\VideoDownloaderService;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -30,7 +31,7 @@ class DownloadClipJob implements ShouldQueue
 
         $this->clip->update([
             'video_path' => $relativeMp4,
-            'status'     => 'video_done',
+            'status'     => ClipStatus::VIDEO_DONE,
         ]);
 
         ConvertAudioJob::dispatch($this->clip)->onQueue('audio');

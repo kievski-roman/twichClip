@@ -1,6 +1,7 @@
 <?php
 namespace App\Jobs;
 
+use App\Enums\ClipStatus;
 use App\Models\Clip;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\File;
@@ -37,7 +38,7 @@ class ConvertAudioJob implements ShouldQueue
 
         $this->clip->update([
             'wav_path' => $relativeWav,
-            'status'   => 'audio_done',
+            'status'   => ClipStatus::AUDIO_DONE,
         ]);
 
         TranscribeJob::dispatch($this->clip)->onQueue('transcribe');

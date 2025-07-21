@@ -2,19 +2,25 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ClipStatus;
 use App\Jobs\BurnSubsJob;
 use App\Jobs\DownloadClipJob;
 use App\Models\Clip;
 use App\Services\TwitchApiService;
 use Illuminate\Http\Request;
-use App\Services\VideoDownloaderService;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
+
 class ClipController extends Controller
 {
+    use AuthorizesRequests;
 
     protected TwitchApiService $twitch;
+
+
+
 
     public function __construct(TwitchApiService $twitch)
     {
@@ -59,7 +65,8 @@ class ClipController extends Controller
                 'uuid'   => (string) Str::uuid(),
                 'url'    => $request->url,
                 'name_video' => basename($request->url),
-                'status' => 'queued',
+                'status' => ClipStatus::QUEUED,
+                'user_id' => auth()->id(),
             ]
         );
 
@@ -68,7 +75,11 @@ class ClipController extends Controller
         return back()->with('flash', 'Кліп додано у чергу! Перевірте через хвилину.');
     }
     public function index(){
-        $clips = Clip::where('status', 'ready')
+        $clips = Clip::whereIn('status', [
+            ClipStatus::READY,
+            ClipStatus::HARD_DONE
+        ])
+            ->where('user_id', auth()->id())
             ->latest()
             ->get();
         return view('clip-index', compact('clips'));
@@ -87,7 +98,10 @@ class ClipController extends Controller
         Storage::disk('public')->put($relative, $data['srt']);
 
         // 3. Запам’ятовуємо без "D:\..." – лиш «public/...»
-        $clip->update(['srt_path' => $relative]);
+        $clip->update([
+            'srt_path' => $relative,
+            'status' => ClipStatus::READY,
+        ]);
 
         return response()->noContent();      // 204
     }
@@ -120,7 +134,7 @@ class ClipController extends Controller
     }
     public function generateHardSubs(Clip $clip)
     {
-        $clip->update(['status' => Clip::STATUS_HARD_PROCESSING]);
+        $clip->update(['status' => ClipStatus::HARD_PROCESSING]);
 
         BurnSubsJob::dispatch($clip)
             ->onQueue('hardsubs');
@@ -128,17 +142,13 @@ class ClipController extends Controller
         return back()->with('flash', 'Почали генерацію відео з hard-сабами!');
     }
 
-    public function downloadHardSub(Clip $clip){
+    public function downloadHardSub(Clip $clip)
+    {
+        $this->authorize('download', $clip);
+        abort_unless($clip->status === ClipStatus::HARD_DONE, 404);
 
-
-        abort_unless($clip->status === Clip::STATUS_HARD_DONE, 404);
-
-        $abs = Storage::disk('public')->path($clip->hard_path);
-
-        // Якщо файл випадково зник — 404
-        abort_unless(is_file($abs), 404);
-
-        return response()->download($abs);
+        return Storage::disk('public')
+            ->download($clip->hard_path, $clip->slug . '.mp4');
     }
 
 
